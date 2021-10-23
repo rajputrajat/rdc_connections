@@ -1,4 +1,6 @@
-#![deny(missing_docs)]
+#![warn(missing_docs)]
+
+//! # To query RDC sessions (connections)
 
 windows::include_bindings!();
 
@@ -18,9 +20,11 @@ use Windows::Win32::{
     },
 };
 
+/// Remote Server
 pub struct RemoteServer {
     server_handle: HANDLE,
-    pub sessions_list: Option<Vec<RemoteDesktopSessionInfo>>,
+    /// Vector of sessions info
+    sessions_list: Option<Vec<RemoteDesktopSessionInfo>>,
 }
 
 impl Drop for RemoteServer {
@@ -30,30 +34,46 @@ impl Drop for RemoteServer {
 }
 
 #[derive(Debug)]
-pub struct RemoteDesktopSessionInfo {
+/// Session Info
+pub(crate) struct RemoteDesktopSessionInfo {
     session_id: u32,
     state: RemoteDesktopSessionState,
     client_info: ClientInfo,
 }
 
 #[derive(Debug)]
-pub struct ClientInfo {
+/// Client Info
+pub(crate) struct ClientInfo {
+    /// Connected user-name
     pub user: String,
+    /// Connected client's NetBIOS name
     pub client: String,
+    /// address of connected client
     pub address: (u32, [u16; 31]),
 }
 
 #[derive(Debug, PartialEq)]
+/// Session state
 pub enum RemoteDesktopSessionState {
+    /// A user is logged on to the WinStation. This state occurs when a user is signed in and actively connected to the device.
     Active,
+    /// The WinStation is connected to the client.
     Connected,
+    /// The WinStation is in the process of connecting to the client.
     ConnectQuery,
+    /// The WinStation is shadowing another WinStation.
     Shadow,
+    /// The WinStation is active but the client is disconnected. This state occurs when a user is signed in but not actively connected to the device, such as when the user has chosen to exit to the lock screen.
     Disconnected,
+    /// The WinStation is waiting for a client to connect.
     Idle,
+    /// The WinStation is listening for a connection. A listener session waits for requests for new client connections. No user is logged on a listener session. A listener session cannot be reset, shadowed, or changed to a regular client session.
     Listen,
+    /// The WinStation is being reset.
     Reset,
+    /// The WinStation is down due to an error.
     Down,
+    /// The WinStation is initializing.
     Init,
 }
 
@@ -76,6 +96,7 @@ impl RemoteDesktopSessionState {
 }
 
 impl RemoteServer {
+    /// Create RemoteServer connection for further queries
     pub fn new<S: Into<String>>(server_name: S) -> Result<Self> {
         let server_name = server_name.into();
         info!("Host-name: {}", server_name);
@@ -88,6 +109,7 @@ impl RemoteServer {
         })
     }
 
+    /// Fetch information from connected server
     pub fn update_info(&mut self) -> Result<()> {
         info!("update requested!");
         let mut sessions: *mut WTS_SESSION_INFOW =
@@ -167,6 +189,7 @@ impl RemoteServer {
     }
 }
 
+/// Get host-name of current windows machine
 pub fn get_host_name() -> Result<String> {
     let mut host_name_buffer = [0_u16; 256];
     let buffer_ptr = PWSTR(host_name_buffer.as_mut_ptr());
