@@ -24,7 +24,7 @@ use Windows::Win32::{
 pub struct RemoteServer {
     server_handle: HANDLE,
     /// Vector of sessions info
-    sessions_list: Option<Vec<RemoteDesktopSessionInfo>>,
+    sessions_list: Vec<RemoteDesktopSessionInfo>,
 }
 
 impl Drop for RemoteServer {
@@ -35,10 +35,22 @@ impl Drop for RemoteServer {
 
 #[derive(Debug)]
 /// Session Info
-pub(crate) struct RemoteDesktopSessionInfo {
+pub struct RemoteDesktopSessionInfo {
     session_id: u32,
     state: RemoteDesktopSessionState,
     client_info: ClientInfo,
+}
+
+impl<'a> Iterator for SessionInfoIter<'a> {
+    type Item = &'a RemoteDesktopSessionInfo;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.internal.iter().next()
+    }
+}
+
+/// Session info iterator
+pub struct SessionInfoIter<'a> {
+    internal: &'a Vec<RemoteDesktopSessionInfo>,
 }
 
 #[derive(Debug)]
@@ -105,7 +117,7 @@ impl RemoteServer {
         trace!("server handle: {:?}", server_handle);
         Ok(Self {
             server_handle,
-            sessions_list: None,
+            sessions_list: Vec::new(),
         })
     }
 
@@ -141,7 +153,7 @@ impl RemoteServer {
                     });
                 }
                 unsafe { WTSFreeMemory(sessions as *mut c_void) };
-                self.sessions_list = Some(sessions_v);
+                self.sessions_list = sessions_v;
                 Ok(())
             }
         }
@@ -185,6 +197,13 @@ impl RemoteServer {
                     address: (client_info.ClientAddressFamily, client_info.ClientAddress),
                 })
             }
+        }
+    }
+
+    /// Returns iterator to go through all connections
+    pub fn iter(&self) -> SessionInfoIter {
+        SessionInfoIter {
+            internal: &self.sessions_list,
         }
     }
 }
