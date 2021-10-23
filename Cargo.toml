@@ -1,6 +1,6 @@
 [package]
 name = "rdc_connections"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 authors = ["Rajat Rajput <rajputrajat@gmail.com>"]
 description = "to query windows RDP connections"
