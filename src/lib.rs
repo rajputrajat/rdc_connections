@@ -23,8 +23,6 @@ use Windows::Win32::{
 /// Remote Server
 pub struct RemoteServer {
     server_handle: HANDLE,
-    /// Vector of sessions info
-    sessions_list: Vec<RemoteDesktopSessionInfo>,
 }
 
 impl Drop for RemoteServer {
@@ -42,18 +40,6 @@ pub struct RemoteDesktopSessionInfo {
     pub state: RemoteDesktopSessionState,
     /// Client info
     pub client_info: ClientInfo,
-}
-
-impl<'a> Iterator for SessionInfoIter<'a> {
-    type Item = &'a RemoteDesktopSessionInfo;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.internal.iter().next()
-    }
-}
-
-/// Session info iterator
-pub struct SessionInfoIter<'a> {
-    internal: &'a Vec<RemoteDesktopSessionInfo>,
 }
 
 #[derive(Debug)]
@@ -118,14 +104,11 @@ impl RemoteServer {
         let mut server_name = WString::from_str(&server_name);
         let server_handle = unsafe { WTSOpenServerW(PWSTR(server_name.as_mut_ptr())) };
         trace!("server handle: {:?}", server_handle);
-        Ok(Self {
-            server_handle,
-            sessions_list: Vec::new(),
-        })
+        Ok(Self { server_handle })
     }
 
     /// Fetch information from connected server
-    pub fn update_info(&mut self) -> Result<()> {
+    pub fn get_updated_info(&mut self) -> Result<Vec<RemoteDesktopSessionInfo>> {
         info!("update requested!");
         let mut sessions: *mut WTS_SESSION_INFOW =
             unsafe { mem::MaybeUninit::uninit().assume_init() };
@@ -156,8 +139,7 @@ impl RemoteServer {
                     });
                 }
                 unsafe { WTSFreeMemory(sessions as *mut c_void) };
-                self.sessions_list = sessions_v;
-                Ok(())
+                Ok(sessions_v)
             }
         }
     }
@@ -200,13 +182,6 @@ impl RemoteServer {
                     address: (client_info.ClientAddressFamily, client_info.ClientAddress),
                 })
             }
-        }
-    }
-
-    /// Returns iterator to go through all connections
-    pub fn iter(&self) -> SessionInfoIter {
-        SessionInfoIter {
-            internal: &self.sessions_list,
         }
     }
 }
