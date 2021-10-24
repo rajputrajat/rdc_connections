@@ -36,9 +36,12 @@ impl Drop for RemoteServer {
 #[derive(Debug)]
 /// Session Info
 pub struct RemoteDesktopSessionInfo {
-    session_id: u32,
-    state: RemoteDesktopSessionState,
-    client_info: ClientInfo,
+    /// session id
+    pub session_id: u32,
+    /// RDC connection state
+    pub state: RemoteDesktopSessionState,
+    /// Client info
+    pub client_info: ClientInfo,
 }
 
 impl<'a> Iterator for SessionInfoIter<'a> {
@@ -55,7 +58,7 @@ pub struct SessionInfoIter<'a> {
 
 #[derive(Debug)]
 /// Client Info
-pub(crate) struct ClientInfo {
+pub struct ClientInfo {
     /// Connected user-name
     pub user: String,
     /// Connected client's NetBIOS name
