@@ -22,12 +22,14 @@ use Windows::Win32::{
 
 /// Remote Server
 pub struct RemoteServer {
-    server_handle: HANDLE,
+    handle: HANDLE,
+    /// name of the server
+    pub name: String,
 }
 
 impl Drop for RemoteServer {
     fn drop(&mut self) {
-        unsafe { WTSCloseServer(self.server_handle) };
+        unsafe { WTSCloseServer(self.handle) };
     }
 }
 
@@ -101,10 +103,13 @@ impl RemoteServer {
     pub fn new<S: Into<String>>(server_name: S) -> Result<Self> {
         let server_name = server_name.into();
         info!("Host-name: {}", server_name);
-        let mut server_name = WString::from_str(&server_name);
-        let server_handle = unsafe { WTSOpenServerW(PWSTR(server_name.as_mut_ptr())) };
-        trace!("server handle: {:?}", server_handle);
-        Ok(Self { server_handle })
+        let mut name = WString::from_str(&server_name);
+        let handle = unsafe { WTSOpenServerW(PWSTR(name.as_mut_ptr())) };
+        trace!("server handle: {:?}", handle);
+        Ok(Self {
+            handle,
+            name: name.to_string(),
+        })
     }
 
     /// Fetch information from connected server
@@ -114,10 +119,8 @@ impl RemoteServer {
             unsafe { mem::MaybeUninit::uninit().assume_init() };
         let mut session_count = 0;
         let mut sessions_v: Vec<RemoteDesktopSessionInfo> = Vec::new();
-        match unsafe {
-            WTSEnumerateSessionsW(self.server_handle, 0, 1, &mut sessions, &mut session_count)
-        }
-        .0
+        match unsafe { WTSEnumerateSessionsW(self.handle, 0, 1, &mut sessions, &mut session_count) }
+            .0
         {
             0 => {
                 let error = unsafe { GetLastError() };
@@ -149,7 +152,7 @@ impl RemoteServer {
         let mut byte_count = 0;
         match unsafe {
             WTSQuerySessionInformationW(
-                self.server_handle,
+                self.handle,
                 session_id,
                 WTSClientInfo,
                 &mut buffer_ptr,
