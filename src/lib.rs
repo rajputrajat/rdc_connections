@@ -55,7 +55,7 @@ pub struct ClientInfo {
     pub address: (u32, [u16; 31]),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 /// Session state
 pub enum RemoteDesktopSessionState {
     /// A user is logged on to the WinStation. This state occurs when a user is signed in and actively connected to the device.
